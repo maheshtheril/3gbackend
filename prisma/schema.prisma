@@ -763,20 +763,6 @@ model user_role {
 
 /// ---------------- H M S  B I L L I N G  M O D E L S ----------------
 
-model HmsTenant {
-  id        String   @id @default(uuid())
-  name      String
-  createdAt DateTime @default(now())
-
-  patients HmsPatient[]
-  doctors  HmsDoctor[]
-  services HmsService[]
-  invoices HmsInvoice[]
-  payments HmsPayment[]
-  entries  HmsAccountingEntry[]
-  messages HmsMessageLog[]
-}
-
 model HmsPatient {
   id        String    @id @default(uuid())
   tenantId  String
@@ -814,27 +800,6 @@ model HmsService {
 
   items HmsInvoiceItem[]
 }
-
-model HmsInvoice {
-  id        String     @id @default(uuid())
-  tenantId  String
-  tenant    HmsTenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  patientId String
-  patient   HmsPatient @relation(fields: [patientId], references: [id])
-  invoiceNo String     @unique
-  subtotal  Decimal    @default(0) @db.Decimal(12, 2)
-  discount  Decimal    @default(0) @db.Decimal(12, 2)
-  tax       Decimal    @default(0) @db.Decimal(12, 2)
-  total     Decimal    @default(0) @db.Decimal(12, 2)
-  status    String     @default("UNPAID")
-  createdAt DateTime   @default(now())
-
-  items    HmsInvoiceItem[]
-  payments HmsPayment[]
-  entries  HmsAccountingEntry[] @relation("InvoiceEntries")
-  messages HmsMessageLog[]      @relation("InvoiceMessages")
-}
-
 
 model HmsPayment {
   id         String     @id @default(uuid())
@@ -897,37 +862,51 @@ enum StockMoveType {
 }
 
 model HmsTenant {
-  id          String        @id @default(uuid())
-  name        String
-  products    HmsProduct[]
-  warehouses  HmsWarehouse[]
-  suppliers   HmsSupplier[]
+  id        String   @id @default(uuid())
+  name      String
+  createdAt DateTime @default(now())
+
+  // 💊 Hospital Management Relations
+  patients HmsPatient[]
+  doctors  HmsDoctor[]
+  services HmsService[]
+  invoices HmsInvoice[]
+  payments HmsPayment[]
+  entries  HmsAccountingEntry[]
+  messages HmsMessageLog[]
+
+  // 📦 Inventory & Procurement Relations
+  products       HmsProduct[]
+  warehouses     HmsWarehouse[]
+  suppliers      HmsSupplier[]
   purchaseOrders HmsPurchaseOrder[]
-  stockMoves  HmsStockMove[]
-  stockLevels HmsStockLevel[]
-  invoices    HmsInvoice[]
+  stockMoves     HmsStockMove[]
+  stockLevels    HmsStockLevel[]
+
+  HmsLocation     HmsLocation[]
+  HmsPurchaseLine HmsPurchaseLine[]
 }
 
 model HmsProduct {
-  id         String   @id @default(uuid())
-  tenantId   String
-  tenant     HmsTenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  code       String   @unique
-  barcode    String?  @unique
-  name       String
-  brand      String?
-  category   String?
-  uom        String?              
-  packSize   Int?                 
-  salePrice  Decimal? @db.Decimal(12,2)
-  costPrice  Decimal? @db.Decimal(12,2)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id        String    @id @default(uuid())
+  tenantId  String
+  tenant    HmsTenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  code      String    @unique
+  barcode   String?   @unique
+  name      String
+  brand     String?
+  category  String?
+  uom       String?
+  packSize  Int?
+  salePrice Decimal?  @db.Decimal(12, 2)
+  costPrice Decimal?  @db.Decimal(12, 2)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
-  batches      HmsProductBatch[]
-  inventory    HmsStockLevel[]      
-  invoiceItems HmsInvoiceItem[]   
-  stockMoves   HmsStockMove[]
+  batches       HmsProductBatch[]
+  inventory     HmsStockLevel[]
+  invoiceItems  HmsInvoiceItem[]
+  stockMoves    HmsStockMove[]
   purchaseLines HmsPurchaseLine[]
 
   @@index([name])
@@ -936,63 +915,66 @@ model HmsProduct {
 }
 
 model HmsWarehouse {
-  id        String   @id @default(uuid())
+  id        String    @id @default(uuid())
   tenantId  String
   tenant    HmsTenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  code      String   @unique
+  code      String    @unique
   name      String
   address   String?
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
 
   locations HmsLocation[]
 }
 
 model HmsLocation {
-  id          String   @id @default(uuid())
-  tenantId    String
-  tenant      HmsTenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  warehouseId String
-  warehouse   HmsWarehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
-  code        String   
-  name        String?
-  level       Int?     
-  createdAt   DateTime @default(now())
-
-  stockLevels HmsStockLevel[]
+  id             String          @id @default(uuid())
+  tenantId       String
+  tenant         HmsTenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  warehouseId    String
+  warehouse      HmsWarehouse    @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+  code           String
+  name           String?
+  level          Int?
+  createdAt      DateTime        @default(now())
+  fromStockMoves HmsStockMove[]  @relation("FromLoc")
+  toStockMoves   HmsStockMove[]  @relation("ToLoc")
+  stockLevels    HmsStockLevel[]
 
   @@index([warehouseId, code])
 }
 
 model HmsProductBatch {
-  id          String   @id @default(uuid())
+  id          String     @id @default(uuid())
   productId   String
   product     HmsProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
   batchNo     String
   manufacture DateTime?
   expiry      DateTime?
-  costPrice   Decimal?  @db.Decimal(12,2)
-  createdAt   DateTime  @default(now())
+  costPrice   Decimal?   @db.Decimal(12, 2)
+  createdAt   DateTime   @default(now())
 
-  stockMoves  HmsStockMove[]
+  stockMoves   HmsStockMove[]
+  stockLevels  HmsStockLevel[]
+  invoiceItems HmsInvoiceItem[]
 
   @@index([productId, batchNo])
   @@index([expiry])
 }
 
 model HmsStockLevel {
-  id         String   @id @default(uuid())
+  id         String           @id @default(uuid())
   tenantId   String
-  tenant     HmsTenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant     HmsTenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   productId  String
-  product    HmsProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+  product    HmsProduct       @relation(fields: [productId], references: [id], onDelete: Cascade)
   locationId String
-  location   HmsLocation @relation(fields: [locationId], references: [id], onDelete: Cascade)
-  batchId    String?    
+  location   HmsLocation      @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  batchId    String?
   batch      HmsProductBatch? @relation(fields: [batchId], references: [id])
-  quantity   Int       @default(0)
-  reserved   Int       @default(0)  
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
+  quantity   Int              @default(0)
+  reserved   Int              @default(0)
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
 
   @@unique([productId, locationId, batchId])
   @@index([productId])
@@ -1000,22 +982,22 @@ model HmsStockLevel {
 }
 
 model HmsStockMove {
-  id             String   @id @default(uuid())
+  id             String           @id @default(uuid())
   tenantId       String
-  tenant         HmsTenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant         HmsTenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   productId      String
-  product        HmsProduct @relation(fields: [productId], references: [id])
+  product        HmsProduct       @relation(fields: [productId], references: [id])
   batchId        String?
   batch          HmsProductBatch? @relation(fields: [batchId], references: [id])
   fromLocationId String?
-  fromLocation   HmsLocation? @relation("FromLoc", fields: [fromLocationId], references: [id])
+  fromLocation   HmsLocation?     @relation("FromLoc", fields: [fromLocationId], references: [id])
   toLocationId   String?
-  toLocation     HmsLocation? @relation("ToLoc", fields: [toLocationId], references: [id])
+  toLocation     HmsLocation?     @relation("ToLoc", fields: [toLocationId], references: [id])
   qty            Int
   type           StockMoveType
-  ref            String?   
+  ref            String?
   createdBy      String?
-  createdAt      DateTime @default(now())
+  createdAt      DateTime         @default(now())
 
   @@index([productId])
   @@index([ref])
@@ -1024,67 +1006,90 @@ model HmsStockMove {
 }
 
 model HmsSupplier {
-  id        String @id @default(uuid())
-  tenantId  String
-  tenant    HmsTenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  name      String
-  phone     String?
-  email     String?
-  address   String?
-  createdAt DateTime @default(now())
+  id             String             @id @default(uuid())
+  tenantId       String
+  tenant         HmsTenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name           String
+  phone          String?
+  email          String?
+  address        String?
+  createdAt      DateTime           @default(now())
+  purchaseOrders HmsPurchaseOrder[]
 }
 
 model HmsPurchaseOrder {
-  id         String   @id @default(uuid())
+  id         String       @id @default(uuid())
   tenantId   String
-  tenant     HmsTenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant     HmsTenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   supplierId String?
   supplier   HmsSupplier? @relation(fields: [supplierId], references: [id])
-  orderNo    String   @unique
-  status     String   // DRAFT | ORDERED | RECEIVED | CANCELLED
-  createdAt  DateTime @default(now())
+  orderNo    String       @unique
+  status     String // DRAFT | ORDERED | RECEIVED | CANCELLED
+  createdAt  DateTime     @default(now())
 
-  lines      HmsPurchaseLine[]
+  lines HmsPurchaseLine[]
 }
 
 model HmsPurchaseLine {
-  id          String   @id @default(uuid())
+  id          String           @id @default(uuid())
   tenantId    String
-  tenant      HmsTenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant      HmsTenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   purchaseId  String
   purchase    HmsPurchaseOrder @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
   productId   String
-  product     HmsProduct @relation(fields: [productId], references: [id])
+  product     HmsProduct       @relation(fields: [productId], references: [id])
   qty         Int
-  receivedQty Int @default(0)
-  rate        Decimal @db.Decimal(12,2)
+  receivedQty Int              @default(0)
+  rate        Decimal          @db.Decimal(12, 2)
   batchNo     String?
   expiry      DateTime?
 }
 
 model HmsInvoice {
-  id         String   @id @default(uuid())
-  tenantId   String
-  tenant     HmsTenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  invoiceNo  String   @unique
-  date       DateTime @default(now())
-  total      Decimal  @db.Decimal(12,2)
-  items      HmsInvoiceItem[]
+  id       String    @id @default(uuid())
+  tenantId String
+  tenant   HmsTenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  /**
+   * optional patient link (nullable to allow non-patient invoices)
+   */
+  patientId String?
+  patient   HmsPatient? @relation(fields: [patientId], references: [id])
+
+  invoiceNo String   @unique
+  date      DateTime @default(now())
+
+  subtotal Decimal @default(0) @db.Decimal(12, 2)
+  discount Decimal @default(0) @db.Decimal(12, 2)
+  tax      Decimal @default(0) @db.Decimal(12, 2)
+  total    Decimal @default(0) @db.Decimal(12, 2)
+
+  status String @default("UNPAID")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  items    HmsInvoiceItem[]
+  payments HmsPayment[]
+  entries  HmsAccountingEntry[] @relation("InvoiceEntries")
+  messages HmsMessageLog[]      @relation("InvoiceMessages")
+
+  @@index([tenantId])
 }
 
 model HmsInvoiceItem {
-  id          String   @id @default(uuid())
+  id          String     @id @default(uuid())
   invoiceId   String
   invoice     HmsInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
   serviceId   String?
   productId   String?
   batchId     String?
   description String
-  qty         Int       @default(1)
-  rate        Decimal   @db.Decimal(12, 2)
-  amount      Decimal   @db.Decimal(12, 2)
+  qty         Int        @default(1)
+  rate        Decimal    @db.Decimal(12, 2)
+  amount      Decimal    @db.Decimal(12, 2)
 
-  service     HmsService?      @relation(fields: [serviceId], references: [id])
-  product     HmsProduct?      @relation(fields: [productId], references: [id])
-  batch       HmsProductBatch? @relation(fields: [batchId], references: [id])
+  service HmsService?      @relation(fields: [serviceId], references: [id])
+  product HmsProduct?      @relation(fields: [productId], references: [id])
+  batch   HmsProductBatch? @relation(fields: [batchId], references: [id])
 }
