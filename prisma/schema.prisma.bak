@@ -21,6 +21,8 @@ model HmsAccountingEntry {
   HmsTenant  HmsTenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 }
 
+
+
 model HmsInvoice {
   id                 String               @id
   tenantId           String
@@ -98,26 +100,24 @@ model HmsMessageLog {
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
 model HmsPatient {
-  id             String           @id
-  tenantId       String
-  uhid           String?          @unique
-  firstName      String
-  lastName       String?
-  phone          String?
-  email          String?
-  createdAt      DateTime         @default(now())
-  address        String?
-  dob            DateTime?        @db.Date
-  updatedAt      DateTime         @default(now())
-  gender         String?
-  meta           Json?            @default("{}")
-  createdBy      String?
-  updatedBy      String?
-  HmsInvoice     HmsInvoice[]
-  HmsMessageLog  HmsMessageLog[]
-  HmsTenant      HmsTenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  HmsAppointment HmsAppointment[]
-  HmsVisit       HmsVisit[]
+  id            String          @id
+  tenantId      String
+  uhid          String?         @unique
+  firstName     String
+  lastName      String?
+  phone         String?
+  email         String?
+  createdAt     DateTime        @default(now())
+  address       String?
+  dob           DateTime?       @db.Date
+  updatedAt     DateTime        @default(now())
+  gender        String?
+  meta          Json?           @default("{}")
+  createdBy     String?
+  updatedBy     String?
+  HmsInvoice    HmsInvoice[]
+  HmsMessageLog HmsMessageLog[]
+  HmsTenant     HmsTenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@index([email], map: "idx_HmsPatient_email")
   @@index([phone], map: "idx_HmsPatient_phone")
@@ -295,8 +295,6 @@ model HmsTenant {
   HmsStockMove       HmsStockMove[]
   HmsSupplier        HmsSupplier[]
   HmsWarehouse       HmsWarehouse[]
-  HmsAppointment     HmsAppointment[]
-  HmsVisit           HmsVisit[]
 }
 
 model HmsWarehouse {
@@ -383,6 +381,8 @@ model ai_embedding {
 
   @@ignore
 }
+
+
 
 /// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model attachment {
@@ -1039,7 +1039,7 @@ model user_permission {
   is_granted      Boolean    @default(true)
   created_at      DateTime?  @default(now()) @db.Timestamptz(6)
   permission      permission @relation(fields: [permission_code], references: [code], onDelete: Cascade, onUpdate: NoAction)
-  app_user        AppUser    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  app_user        app_user   @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@id([user_id, tenant_id, permission_code])
   @@index([user_id, tenant_id], map: "idx_user_permission_user_tenant")
@@ -1067,6 +1067,9 @@ enum StockMoveType {
   DAMAGED
 }
 
+
+
+
 enum AppointmentStatus {
   scheduled
   confirmed
@@ -1083,83 +1086,80 @@ enum VisitStatus {
 }
 
 model HmsDoctor {
-  id           String           @id @default(uuid())
-  tenantId     String
-  tenant       HmsTenant        @relation(fields: [tenantId], references: [id])
-  firstName    String
-  lastName     String
-  specialty    String?
-  createdAt    DateTime         @default(now())
+  id        String   @id @default(uuid())
+  tenantId  String
+  tenant    HmsTenant @relation(fields: [tenantId], references: [id])
+  firstName String
+  lastName  String
+  specialty String?
+  createdAt DateTime @default(now())
   // ...
   appointments HmsAppointment[]
   visits       HmsVisit[]
 }
 
 model HmsAppointment {
-  id          String            @id @default(uuid())
+  id          String             @id @default(uuid())
   tenantId    String
-  tenant      HmsTenant         @relation(fields: [tenantId], references: [id])
+  tenant      HmsTenant          @relation(fields: [tenantId], references: [id])
   patientId   String
-  patient     HmsPatient        @relation(fields: [patientId], references: [id])
+  patient     HmsPatient         @relation(fields: [patientId], references: [id])
   doctorId    String?
-  doctor      HmsDoctor?        @relation(fields: [doctorId], references: [id])
+  doctor      HmsDoctor?         @relation(fields: [doctorId], references: [id])
   scheduledAt DateTime?
-  status      AppointmentStatus @default(scheduled)
+  status      AppointmentStatus  @default(scheduled)
   reason      String?
   createdById String?
-  createdBy   AppUser?          @relation("CreatedByAppointments", fields: [createdById], references: [id])
+  createdBy   AppUser?           @relation("CreatedByAppointments", fields: [createdById], references: [id])
   cancelledAt DateTime?
-  createdAt   DateTime          @default(now())
+  createdAt   DateTime           @default(now())
 
   @@index([tenantId, scheduledAt])
   @@index([tenantId, patientId])
-  
 }
 
 
 model HmsVisit {
-  id           String      @id @default(uuid())
-  tenantId     String
-  tenant       HmsTenant   @relation(fields: [tenantId], references: [id])
-  patientId    String
-  patient      HmsPatient  @relation(fields: [patientId], references: [id])
-  doctorId     String?
-  doctor       HmsDoctor?  @relation(fields: [doctorId], references: [id])
-  visitDate    DateTime    @default(now())
-  department   String?
-  status       VisitStatus @default(active)
-  reason       String?
-  createdById  String?
-  createdBy    AppUser?    @relation("CreatedByVisits", fields: [createdById], references: [id])
-  checkedInAt  DateTime?
+  id         String      @id @default(uuid())
+  tenantId   String
+  tenant     HmsTenant   @relation(fields: [tenantId], references: [id])
+  patientId  String
+  patient    HmsPatient  @relation(fields: [patientId], references: [id])
+  doctorId   String?
+  doctor     HmsDoctor?  @relation(fields: [doctorId], references: [id])
+  visitDate  DateTime    @default(now())
+  department String?
+  status     VisitStatus @default(active)
+  reason     String?
+  createdById String?
+  createdBy   AppUser?   @relation("CreatedByVisits", fields: [createdById], references: [id])
+  checkedInAt DateTime?
   checkedOutAt DateTime?
 
   @@index([tenantId, visitDate])
   @@index([tenantId, patientId])
-  
-
 }
 
+
 model AppUser {
-  id              String    @id @default(dbgenerated("gen_random_uuid()")) @map("id") @db.Uuid
-  tenantId        String    @map("tenant_id") @db.Uuid
-  companyId       String?   @map("company_id") @db.Uuid
-  email           String    @map("email")
-  name            String?   @map("name")
-  password        String?   @map("password")
-  isAdmin         Boolean?  @default(false) @map("is_admin")
-  isActive        Boolean?  @default(true) @map("is_active")
-  metadata        Json?     @default(dbgenerated("'{}'::jsonb")) @map("metadata")
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid @map("id")
+  tenantId        String   @db.Uuid @map("tenant_id")
+  companyId       String?  @db.Uuid @map("company_id")
+  email           String   @map("email")
+  name            String?  @map("name")
+  password        String?  @map("password")
+  isAdmin         Boolean? @default(false) @map("is_admin")
+  isActive        Boolean? @default(true)  @map("is_active")
+  metadata        Json?    @default(dbgenerated("'{}'::jsonb")) @map("metadata")
   createdAt       DateTime? @default(now()) @map("created_at")
-  fullName        String?   @map("full_name")
-  role            String?   @map("role")
-  isPlatformAdmin Boolean   @default(false) @map("is_platform_admin")
-  isTenantAdmin   Boolean   @default(false) @map("is_tenant_admin")
+  fullName        String?  @map("full_name")
+  role            String?  @map("role")
+  isPlatformAdmin Boolean  @default(false) @map("is_platform_admin")
+  isTenantAdmin   Boolean  @default(false) @map("is_tenant_admin")
 
   // back-relations used by HmsAppointment and HmsVisit (names must match @relation in those models)
-  CreatedByAppointments HmsAppointment[]  @relation("CreatedByAppointments")
-  CreatedByVisits       HmsVisit[]        @relation("CreatedByVisits")
-  user_permission       user_permission[]
+  CreatedByAppointments HmsAppointment[] @relation("CreatedByAppointments")
+  CreatedByVisits       HmsVisit[]       @relation("CreatedByVisits")
 
   @@map("app_user")
 }

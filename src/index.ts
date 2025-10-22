@@ -26,6 +26,13 @@ import uploadsRouter from "./routes/uploads";
 import checkEmail from "./routes/check-email";
 import kpisTodaysRouter from "./routes/kpis_todays";
 import kpisRouter from "./routes/kpis";
+import hms from './routes/hms';   
+import publicInvoice from './routes/public-invoice';
+
+import appointmentsRouter from "./routes/appointments";
+import patientsRouter from "./routes/patients";
+import doctorsRouter from "./routes/doctors";
+
 
 
 /* ───────────────────────────── Express init ───────────────────────────── */
@@ -110,6 +117,8 @@ app.use("/api", leads);
 app.use("/api", pipelines);
 app.use("/api", kanban);
 
+app.use(hms);
+app.use(publicInvoice);
 
 
 /* ───────────────────────────── Admin namespace ───────────────────────────── */
@@ -127,6 +136,10 @@ app.use("/api/tenants", tenantsRouter);
 app.use("/api/tenant-signup", tenantSignup); // POST /
 app.use("/api/audit-logs", auditLogs);
 app.use("/api/scheduler", schedulerRouter);
+app.use("/api/appointments", appointmentsRouter);
+app.use("/api/patients", patientsRouter);
+app.use("/api/doctors", doctorsRouter);
+
 
 /* ───────────────────────────── Leads custom fields ───────────────────────────── */
 app.use("/api/leads", leadCustomFieldsRouter);
@@ -167,6 +180,7 @@ app.use(
     res.status(status).json(body);
   }
 );
+
 
 /* ───────────────────────────── Start server ───────────────────────────── */
 const PORT = Number(process.env.PORT || 4000); // Render injects a dynamic PORT (e.g., 10000)
